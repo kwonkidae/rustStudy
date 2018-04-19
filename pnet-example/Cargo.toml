@@ -1,0 +1,7 @@
+[package]
+name = "pnet-example"
+version = "0.1.0"
+authors = ["kwon <kkdosk@naver.com>"]
+
+[dependencies]
+pnet = "*"

@@ -18,11 +18,17 @@ fn main() {
     
     // let sum = x + y;
 
+    #[derive(Debug)]
+    enum UsState {
+        Alabama,
+        Alaska,
+    }
+
     enum Coin {
         Penny,
         Nickel,
         Dime,
-        Quarter,
+        Quarter(UsState),
     }
 
     fn value_in_cents(coin: Coin) -> u32 {
@@ -33,9 +39,12 @@ fn main() {
             },
             Coin::Nickel => 5,
             Coin::Dime => 10,
-            Coin::Quarter => 25,
+            Coin::Quarter(state) => {
+                println!("State quarter from {:?}!", state);
+                25
+            }
         }
     }
 
-    value_in_cents(Coin::Penny);
+    value_in_cents(Coin::Quarter(UsState::Alabama));
 }
