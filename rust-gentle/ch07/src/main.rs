@@ -7,6 +7,9 @@ use std::sync::Arc;
 use std::sync::Barrier;
 use std::sync::Mutex;
 use std::process::Command;
+use std::net::*;
+use std::io::prelude::*;
+use std::io;
 extern crate pipeliner;
 use pipeliner::Pipeline;
 
@@ -105,16 +108,50 @@ fn main() {
 		}
 	}
 	{
-		let addresses: Vec<_> = (1..40).map(|n| format!("ping -c1 192.168.0.{}", n)).collect();
-		let n = addresses.len();
+		// let addresses: Vec<_> = (1..10).map(|n| format!("ping -c1 192.168.0.{}", n)).collect();
+		// let n = addresses.len();
 
-		for result in addresses.with_threads(n).map(|s| shell(&s)) {
-			if result.1 {
-				println!("got: {}", result.0);
-			} else {
-				println!("error");
+		// for result in addresses.with_threads(n).map(|s| shell(&s)) {
+		// 	if result.1 {
+		// 		println!("got: {}", result.0);
+		// 	} else {
+		// 		println!("error");
+		// 	}
+		// }
+
+		{
+			for res in "google.com:80".to_socket_addrs().expect("bad") {
+				println!("got {:?}", res);
+			}
+
+			let addresses: Vec<_> = (1..40).map(|n| format!("192.168.0.{}:0", n)).collect();
+			let n = addresses.len();
+
+			for result in addresses.with_threads(n).map(|s| s.to_socket_addrs().unwrap().next().unwrap()) {
+				println!("got: {:?}", result);
 			}
 		}
+	}
+
+	{
+		thread::spawn(|| {
+			let listener = TcpListener::bind("127.0.0.1:8000").expect("could not start server");
+
+			for connection in listener.incoming() {
+				match connection {
+					Ok(stream) => {
+						if let Err(e) = handle_connection(stream) {
+							println!("error {:?}", e);
+						}
+						// let mut text = String::new();
+						// stream.read_to_string(&mut text).expect("read failed");
+						// println!("got '{}'", text);
+
+					}
+					Err(e) => { println! ("connection failed {}", e); }
+				}
+			}
+		}).join();
 	}
 }
 
@@ -129,4 +166,19 @@ fn shell(cmd: &str) -> (String,bool) {
 		String::from_utf8_lossy(&output.stdout).trim_right().to_owned(),
 		output.status.success()
 	)
+}
+
+fn handle_connection(stream: TcpStream) -> io::Result<()>{
+
+	while true {
+		let mut ostream = stream.try_clone()?;
+		let mut rdr = io::BufReader::new(ostream);
+		let mut text = String::new();
+		println!("start !");
+		rdr.read_line(&mut text)?;
+		println!("got '{}'", text.trim_right());
+		println!("end !");
+	}
+
+	Ok(())
 }
