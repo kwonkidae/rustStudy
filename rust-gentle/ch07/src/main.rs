@@ -4,6 +4,7 @@ use std::rc::Rc;
 use std::thread;
 use std::time;
 use std::sync::Arc;
+use std::sync::mpsc;
 use std::sync::Barrier;
 use std::sync::Mutex;
 use std::process::Command;
@@ -61,53 +62,70 @@ fn main() {
 			println!("hello {}", i);
 		});
 		threads.push(t);
+
 	}
 
 	for t in threads {
 		t.join().expect("thread failed");
 	}
 
-	{
-		let nthreads = 5;
-		let mut threads = Vec::new();
-		let barrier = Arc::new(Barrier::new(nthreads));
+	let name = "dolly".to_string();
+	// move가 없으면 컴파일 에러
+	let t = thread::spawn(move || {
+		println!("hello {}", name);
+	});
+	println!("wait {:?}", t.join());
 
-		for i in 0..nthreads {
-			let barrier = barrier.clone();
+	{
+		let name = "dolly";
+		let t1 = thread::spawn(move || {
+			println!("hello {}", name);
+		});
+
+		let t2 = thread::spawn(move || {
+			println!("goodbye{} ", name);
+		});
+
+		println!("{:?}", t1.join());
+		println!("{:?}", t2.join());
+	}
+
+	{
+		let mut threads = Vec::new();
+		let name = Arc::new(MyString::new("dolly"));
+
+		for i in 0..5 {
+			let tname = name.clone();
 			let t = thread::spawn(move || {
-				println!("before wait {}", i);
-				barrier.wait();
-				println!("after wait {}", i);
+				println!("hello {} count {}", tname.0, i);
 			});
 			threads.push(t);
 		}
 
 		for t in threads {
-			t.join().unwrap();
+			t.join().expect("thread failed");
 		}
 	}
 
 	{
-		let answer = Arc::new(Mutex::new(42));
+		let nthreads = 5;
+		let (tx, rx) = mpsc::channel();
 
-		let answer_ref = answer.clone();
-		let t = thread::spawn(move || {
-			let mut answer = answer_ref.lock().unwrap();
-			*answer = 55;
-		});
+		for i in 0..nthreads {
+			let tx = tx.clone();
+			thread::spawn(move || {
+				let response = format!("hello {}", i);
+				tx.send(response).unwrap();
+			});
+		}
 
-		t.join().unwrap();
-
-		let ar = answer.lock().unwrap();
-		assert_eq!(*ar, 55);
-	}
-
-	{
-		for result in (0..10).with_threads(4).map(move |x| x + 1) {
-			println!("result: {}", result);
+		for _ in 0..nthreads {
+			println!("got {:?}", rx.recv());
 		}
 	}
+
 	{
+<<<<<<< HEAD
 		// let addresses: Vec<_> = (1..10).map(|n| format!("ping -c1 192.168.0.{}", n)).collect();
 		// let n = addresses.len();
 
@@ -129,9 +147,24 @@ fn main() {
 
 			for result in addresses.with_threads(n).map(|s| s.to_socket_addrs().unwrap().next().unwrap()) {
 				println!("got: {:?}", result);
+=======
+		// block send operation 
+		let (tx, rx) = mpsc::sync_channel(4);
+
+		let t1 = thread::spawn(move || {
+			for i in 0..5 {
+				tx.send(i).unwrap();
+>>>>>>> e57de96154cd0c4f070feab716c65db981f60d69
 			}
-		}
+		});
+
+		// for _ in 0..5 {
+		// 	let res = rx.recv().unwrap();
+		// 	println!("{}", res);
+		// }
+		t1.join().unwrap();
 	}
+<<<<<<< HEAD
 
 	{
 		thread::spawn(|| {
@@ -154,20 +187,12 @@ fn main() {
 		}).join();
 	}
 }
+=======
+>>>>>>> e57de96154cd0c4f070feab716c65db981f60d69
 
-fn shell(cmd: &str) -> (String,bool) {
-	let cmd = format!("{} 2>&1",cmd);
-	let output = Command::new("/bin/sh")
-		.arg("-c")
-		.arg(&cmd)
-		.output()
-		.expect("no shell?");
-	(
-		String::from_utf8_lossy(&output.stdout).trim_right().to_owned(),
-		output.status.success()
-	)
 }
 
+<<<<<<< HEAD
 fn handle_connection(stream: TcpStream) -> io::Result<()>{
 
 	while true {
@@ -182,3 +207,12 @@ fn handle_connection(stream: TcpStream) -> io::Result<()>{
 
 	Ok(())
 }
+=======
+struct MyString(String);
+
+impl MyString {
+	fn new(s: &str) -> MyString {
+		MyString(s.to_owned())
+	}
+}
+>>>>>>> e57de96154cd0c4f070feab716c65db981f60d69
