@@ -5,6 +5,11 @@ use std::thread;
 use std::time;
 use std::sync::Arc;
 use std::sync::mpsc;
+use std::sync::Barrier;
+use std::sync::Mutex;
+use std::process::Command;
+extern crate pipeliner;
+use pipeliner::Pipeline;
 
 fn main() {
 	let answer = Cell::new(42);
